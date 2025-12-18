@@ -1,0 +1,55 @@
+{
+  "name": "opencode-zellij-namer",
+  "version": "1.0.0",
+  "description": "AI-powered dynamic Zellij session naming for OpenCode",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_USERNAME/opencode-zellij-namer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/opencode-zellij-namer/issues"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/opencode-zellij-namer#readme",
+  "keywords": [
+    "opencode",
+    "zellij",
+    "plugin",
+    "session",
+    "naming",
+    "ai",
+    "gemini",
+    "terminal",
+    "multiplexer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
+}
