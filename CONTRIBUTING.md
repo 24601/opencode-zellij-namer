@@ -42,7 +42,7 @@ Use conventional commits:
 
 ## Security
 
-If you discover a security vulnerability, please email the maintainer directly instead of opening a public issue.
+If you discover a security vulnerability, please email me (basit.mustafa+security@gmail.com) directly instead of opening a public issue.
 
 ## Questions?
 
