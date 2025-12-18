@@ -114,6 +114,7 @@ describe('opencode-zellij-namer', () => {
       expect(config.cooldownMs).toBe(300000);
       expect(config.debounceMs).toBe(5000);
       expect(config.maxSignals).toBe(25);
+      expect(config.customInstructions).toBe('');
     });
 
     test('respects env var overrides', () => {
@@ -121,6 +122,40 @@ describe('opencode-zellij-namer', () => {
       const config = getConfig();
       expect(config.cooldownMs).toBe(60000);
       delete process.env.OPENCODE_ZELLIJ_COOLDOWN_MS;
+    });
+
+    test('loads custom instructions from env', () => {
+      process.env.OPENCODE_ZN_INSTRUCTIONS = 'Always use short names, prefer abbreviations';
+      const config = getConfig();
+      expect(config.customInstructions).toBe('Always use short names, prefer abbreviations');
+      delete process.env.OPENCODE_ZN_INSTRUCTIONS;
+    });
+
+    test('custom instructions default to empty string', () => {
+      delete process.env.OPENCODE_ZN_INSTRUCTIONS;
+      const config = getConfig();
+      expect(config.customInstructions).toBe('');
+    });
+  });
+
+  describe('custom instructions', () => {
+    test('custom instructions are included in AI prompt when set', () => {
+      const instructions = 'Use project codenames instead of directory names';
+      const prompt = buildAIPrompt('myapp', ['working on auth'], instructions);
+      expect(prompt).toContain('Additional instructions from user:');
+      expect(prompt).toContain(instructions);
+    });
+
+    test('custom instructions are omitted when empty', () => {
+      const prompt = buildAIPrompt('myapp', ['working on auth'], '');
+      expect(prompt).not.toContain('Additional instructions from user:');
+    });
+
+    test('custom instructions are truncated at 500 chars', () => {
+      const longInstructions = 'x'.repeat(600);
+      const prompt = buildAIPrompt('myapp', ['working on auth'], longInstructions);
+      const instructionsInPrompt = prompt.split('Additional instructions from user:')[1];
+      expect(instructionsInPrompt.length).toBeLessThanOrEqual(510);
     });
   });
 
@@ -201,7 +236,29 @@ function getConfig() {
     debounceMs: Number(process.env.OPENCODE_ZELLIJ_DEBOUNCE_MS) || 5000,
     maxSignals: Number(process.env.OPENCODE_ZELLIJ_MAX_SIGNALS) || 25,
     model: process.env.OPENCODE_ZELLIJ_MODEL || 'gemini-3-flash-preview',
+    customInstructions: process.env.OPENCODE_ZN_INSTRUCTIONS || '',
   };
+}
+
+function buildAIPrompt(project: string, signals: string[], customInstructions: string): string {
+  const safeSignals = signals.slice(-5).map((s) => s.slice(0, 100));
+  
+  let prompt = `Generate a short Zellij terminal session name.
+Project: ${project}
+Recent activity: ${safeSignals.join("; ")}
+
+Rules:
+- Format: project-intent or project-intent-tag
+- Intent must be one of: feat, fix, debug, refactor, test, doc, ops, review, spike
+- Tag is optional, 2-8 chars, describes specific area
+- Total max 40 chars, lowercase, only a-z 0-9 and hyphens
+- Return ONLY the session name, nothing else`;
+
+  if (customInstructions) {
+    prompt += `\n\nAdditional instructions from user:\n${customInstructions.slice(0, 500)}`;
+  }
+
+  return prompt;
 }
 
 function addSignal(signals: string[], signal: string, maxSignals: number): void {

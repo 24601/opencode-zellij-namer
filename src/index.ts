@@ -12,6 +12,7 @@ interface PluginConfig {
   maxSignals: number;
   model: string;
   debug: boolean;
+  customInstructions: string;
 }
 
 interface State {
@@ -37,6 +38,7 @@ function loadConfig(): PluginConfig {
     maxSignals: Number(env.OPENCODE_ZN_MAX_SIGNALS) || 25,
     model: env.OPENCODE_ZN_MODEL || "gemini-3-flash-preview",
     debug: env.OPENCODE_ZN_DEBUG === "1",
+    customInstructions: env.OPENCODE_ZN_INSTRUCTIONS || "",
   };
 }
 
@@ -206,7 +208,8 @@ async function generateNameWithAI(
     const model = gemini.getGenerativeModel({ model: config.model });
 
     const safeSignals = signals.slice(-5).map((s) => s.slice(0, 100));
-    const prompt = `Generate a short Zellij terminal session name.
+    
+    let prompt = `Generate a short Zellij terminal session name.
 Project: ${project}
 Recent activity: ${safeSignals.join("; ")}
 
@@ -216,6 +219,10 @@ Rules:
 - Tag is optional, 2-8 chars, describes specific area
 - Total max 40 chars, lowercase, only a-z 0-9 and hyphens
 - Return ONLY the session name, nothing else`;
+
+    if (config.customInstructions) {
+      prompt += `\n\nAdditional instructions from user:\n${config.customInstructions.slice(0, 500)}`;
+    }
 
     const result = await Promise.race([
       model.generateContent(prompt),

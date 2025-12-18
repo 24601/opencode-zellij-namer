@@ -47,6 +47,21 @@ All configuration is via environment variables:
 | `OPENCODE_ZELLIJ_MODEL` | `gemini-3-flash-preview` | Gemini model to use |
 | `OPENCODE_ZELLIJ_MAX_SIGNALS` | `25` | Max activity signals to retain |
 | `OPENCODE_ZELLIJ_TIMEOUT_MS` | `3000` | AI request timeout |
+| `OPENCODE_ZN_INSTRUCTIONS` | - | Custom naming instructions for AI |
+
+### Custom Instructions
+
+You can provide custom instructions to guide the AI naming:
+
+```bash
+export OPENCODE_ZN_INSTRUCTIONS="Use short codenames. Prefer 'api' over 'backend'. Always include ticket numbers from todos."
+```
+
+This is useful for:
+- Enforcing team naming conventions
+- Using project codenames instead of directory names
+- Prioritizing certain context (e.g., ticket numbers)
+- Adjusting tag preferences
 
 ### Example
 
