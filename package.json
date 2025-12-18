@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/opencode-zellij-namer.git"
+    "url": "git+https://github.com/24601/opencode-zellij-namer.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/opencode-zellij-namer/issues"
+    "url": "https://github.com/24601/opencode-zellij-namer/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/opencode-zellij-namer#readme",
+  "homepage": "https://github.com/24601/opencode-zellij-namer#readme",
   "keywords": [
     "opencode",
     "zellij",
