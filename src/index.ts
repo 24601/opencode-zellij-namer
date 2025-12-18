@@ -13,6 +13,7 @@ interface PluginConfig {
   model: string;
   debug: boolean;
   customInstructions: string;
+  useAgentsMd: boolean;
 }
 
 interface State {
@@ -39,7 +40,66 @@ function loadConfig(): PluginConfig {
     model: env.OPENCODE_ZN_MODEL || "gemini-3-flash-preview",
     debug: env.OPENCODE_ZN_DEBUG === "1",
     customInstructions: env.OPENCODE_ZN_INSTRUCTIONS || "",
+    useAgentsMd: env.OPENCODE_ZN_USE_AGENTS_MD !== "0",
   };
+}
+
+function extractNamingGuidance(agentsMdContent: string): string | null {
+  const namingSectionMatch = agentsMdContent.match(
+    /##\s*(?:Session\s*)?Naming[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i
+  );
+  if (namingSectionMatch) {
+    return namingSectionMatch[1].trim().slice(0, 400);
+  }
+
+  const guidelinesMatch = agentsMdContent.match(
+    /##\s*Guidelines[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i
+  );
+  if (guidelinesMatch) {
+    const content = guidelinesMatch[1];
+    const namingLines = content
+      .split("\n")
+      .filter((line) => /naming|session|tag|intent/i.test(line))
+      .join("\n");
+    if (namingLines.length > 10) {
+      return namingLines.trim().slice(0, 400);
+    }
+  }
+
+  return null;
+}
+
+function loadAgentsMdGuidance(cwd: string, log: ReturnType<typeof createLogger>): string | null {
+  const resolvedCwd = resolve(cwd);
+  const possiblePaths = [
+    join(resolvedCwd, "AGENTS.md"),
+    join(resolvedCwd, ".github", "AGENTS.md"),
+    join(resolvedCwd, "docs", "AGENTS.md"),
+  ];
+
+  for (const agentsPath of possiblePaths) {
+    try {
+      const realPath = resolve(agentsPath);
+      if (!realPath.startsWith(resolvedCwd)) {
+        log.debug(`Path traversal detected: ${agentsPath}`);
+        continue;
+      }
+
+      if (existsSync(realPath)) {
+        const content = readFileSync(realPath, "utf8");
+        const guidance = extractNamingGuidance(content);
+        if (guidance) {
+          log.debug(`Loaded naming guidance from ${realPath}`);
+          return guidance;
+        }
+        log.debug(`No naming section found in ${realPath}`);
+      }
+    } catch (e) {
+      log.debug(`Failed to read ${agentsPath}: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  }
+
+  return null;
 }
 
 function createLogger(debug: boolean) {
@@ -195,6 +255,7 @@ async function generateNameWithAI(
   project: string,
   signals: string[],
   config: PluginConfig,
+  agentsMdGuidance: string | null,
   log: ReturnType<typeof createLogger>
 ): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -220,8 +281,12 @@ Rules:
 - Total max 40 chars, lowercase, only a-z 0-9 and hyphens
 - Return ONLY the session name, nothing else`;
 
+    if (agentsMdGuidance) {
+      prompt += `\n\nProject naming guidelines from AGENTS.md:\n${agentsMdGuidance}`;
+    }
+
     if (config.customInstructions) {
-      prompt += `\n\nAdditional instructions from user:\n${config.customInstructions.slice(0, 500)}`;
+      prompt += `\n\nUser instructions (take precedence over AGENTS.md):\n${config.customInstructions.slice(0, 500)}`;
     }
 
     const result = await Promise.race([
@@ -296,6 +361,11 @@ export const ZellijNamer = async ({ directory }: { directory: string }) => {
 
   const zellij = findZellij(log);
 
+  let agentsMdGuidance: string | null = null;
+  if (config.useAgentsMd) {
+    agentsMdGuidance = loadAgentsMdGuidance(directory, log);
+  }
+
   log.debug(`Initialized with config: ${JSON.stringify({ ...config, debug: config.debug })}`);
 
   async function maybeRename(cwd: string): Promise<void> {
@@ -323,7 +393,7 @@ export const ZellijNamer = async ({ directory }: { directory: string }) => {
     const intent = inferIntent(signalText);
     const tag = inferTag(signalText);
 
-    let name = await generateNameWithAI(project, state.signals, config, log);
+    let name = await generateNameWithAI(project, state.signals, config, agentsMdGuidance, log);
     if (!name) {
       name = buildName(project, intent, tag);
     }

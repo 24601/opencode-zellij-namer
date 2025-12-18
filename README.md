@@ -48,6 +48,36 @@ All configuration is via environment variables:
 | `OPENCODE_ZELLIJ_MAX_SIGNALS` | `25` | Max activity signals to retain |
 | `OPENCODE_ZELLIJ_TIMEOUT_MS` | `3000` | AI request timeout |
 | `OPENCODE_ZN_INSTRUCTIONS` | - | Custom naming instructions for AI |
+| `OPENCODE_ZN_USE_AGENTS_MD` | `1` | Set to `0` to disable AGENTS.md reading |
+
+### AGENTS.md Integration
+
+The plugin automatically reads naming guidance from your project's `AGENTS.md` file. This allows you to define project-specific naming conventions that all contributors will follow.
+
+**Supported locations** (checked in order):
+- `./AGENTS.md`
+- `./.github/AGENTS.md`
+- `./docs/AGENTS.md`
+
+**Extracted sections** (by priority):
+1. `## Naming` or `## Session Naming` — entire section content
+2. `## Guidelines` — lines containing "naming", "session", "tag", or "intent"
+
+**Example AGENTS.md:**
+
+```markdown
+# My Project
+
+## Session Naming
+
+- Use team prefix "acme-" for all sessions
+- Prefer ticket numbers as tags (e.g., acme-feat-jira123)
+- Use "api" instead of "backend" for backend work
+```
+
+The plugin extracts this guidance and includes it in the AI prompt.
+
+**To disable:** Set `OPENCODE_ZN_USE_AGENTS_MD=0`
 
 ### Custom Instructions
 
@@ -62,6 +92,15 @@ This is useful for:
 - Using project codenames instead of directory names
 - Prioritizing certain context (e.g., ticket numbers)
 - Adjusting tag preferences
+
+### Precedence
+
+When both AGENTS.md and custom instructions are present:
+
+1. **AGENTS.md** — Project-level guidance (shared with team)
+2. **Custom Instructions** — User-level overrides (personal preference)
+
+Custom instructions **take precedence** over AGENTS.md when they conflict. This allows teams to define baseline conventions in AGENTS.md while individual developers can customize for their workflow.
 
 ### Example
 

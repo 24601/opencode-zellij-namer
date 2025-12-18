@@ -141,21 +141,117 @@ describe('opencode-zellij-namer', () => {
   describe('custom instructions', () => {
     test('custom instructions are included in AI prompt when set', () => {
       const instructions = 'Use project codenames instead of directory names';
-      const prompt = buildAIPrompt('myapp', ['working on auth'], instructions);
-      expect(prompt).toContain('Additional instructions from user:');
+      const prompt = buildAIPrompt('myapp', ['working on auth'], null, instructions);
+      expect(prompt).toContain('User instructions (take precedence over AGENTS.md):');
       expect(prompt).toContain(instructions);
     });
 
     test('custom instructions are omitted when empty', () => {
-      const prompt = buildAIPrompt('myapp', ['working on auth'], '');
-      expect(prompt).not.toContain('Additional instructions from user:');
+      const prompt = buildAIPrompt('myapp', ['working on auth'], null, '');
+      expect(prompt).not.toContain('User instructions');
     });
 
     test('custom instructions are truncated at 500 chars', () => {
       const longInstructions = 'x'.repeat(600);
-      const prompt = buildAIPrompt('myapp', ['working on auth'], longInstructions);
-      const instructionsInPrompt = prompt.split('Additional instructions from user:')[1];
+      const prompt = buildAIPrompt('myapp', ['working on auth'], null, longInstructions);
+      const instructionsInPrompt = prompt.split('User instructions (take precedence over AGENTS.md):')[1];
       expect(instructionsInPrompt.length).toBeLessThanOrEqual(510);
+    });
+  });
+
+  describe('AGENTS.md integration', () => {
+    test('useAgentsMd is enabled by default', () => {
+      delete process.env.OPENCODE_ZN_USE_AGENTS_MD;
+      const config = getConfig();
+      expect(config.useAgentsMd).toBe(true);
+    });
+
+    test('useAgentsMd can be disabled via env var', () => {
+      process.env.OPENCODE_ZN_USE_AGENTS_MD = '0';
+      const config = getConfig();
+      expect(config.useAgentsMd).toBe(false);
+      delete process.env.OPENCODE_ZN_USE_AGENTS_MD;
+    });
+
+    test('extracts naming section from AGENTS.md', () => {
+      const content = `# Project
+## Naming
+Use short names. Prefer "api" over "backend".
+Always include feature area.
+## Other Section
+Unrelated content.`;
+      const guidance = extractNamingGuidance(content);
+      expect(guidance).toContain('Use short names');
+      expect(guidance).toContain('Prefer "api"');
+      expect(guidance).not.toContain('Unrelated');
+    });
+
+    test('extracts Session Naming section', () => {
+      const content = `# Project
+## Session Naming Guidelines
+Sessions should be named with ticket numbers.
+## Other
+Something else.`;
+      const guidance = extractNamingGuidance(content);
+      expect(guidance).toContain('ticket numbers');
+    });
+
+    test('falls back to Guidelines section with naming keywords', () => {
+      const content = `# Project
+## Guidelines
+- Code should be clean
+- Session naming should include team prefix
+- Tests are important
+## Other
+Unrelated.`;
+      const guidance = extractNamingGuidance(content);
+      expect(guidance).toContain('Session naming should include team prefix');
+      expect(guidance).not.toContain('Code should be clean');
+    });
+
+    test('returns null if no naming guidance found', () => {
+      const content = `# Project
+## Guidelines
+- Code should be clean
+- Tests are important
+## Other
+Unrelated.`;
+      const guidance = extractNamingGuidance(content);
+      expect(guidance).toBeNull();
+    });
+
+    test('truncates guidance to 400 chars', () => {
+      const longGuidance = 'x'.repeat(500);
+      const content = `## Naming\n${longGuidance}\n## Other`;
+      const guidance = extractNamingGuidance(content);
+      expect(guidance!.length).toBeLessThanOrEqual(400);
+    });
+
+    test('AGENTS.md guidance is included in AI prompt', () => {
+      const agentsGuidance = 'Use team prefix "acme-" for all sessions';
+      const prompt = buildAIPrompt('myapp', ['working on auth'], agentsGuidance, '');
+      expect(prompt).toContain('Project naming guidelines from AGENTS.md:');
+      expect(prompt).toContain(agentsGuidance);
+    });
+
+    test('custom instructions take precedence over AGENTS.md', () => {
+      const agentsGuidance = 'Use team prefix "acme-"';
+      const customInstructions = 'Ignore team prefix, use short names';
+      const prompt = buildAIPrompt('myapp', ['working on auth'], agentsGuidance, customInstructions);
+      
+      const agentsIdx = prompt.indexOf('AGENTS.md');
+      const customIdx = prompt.indexOf('User instructions (take precedence');
+      expect(customIdx).toBeGreaterThan(agentsIdx);
+      expect(prompt).toContain('take precedence over AGENTS.md');
+    });
+
+    test('both AGENTS.md and custom instructions can be present', () => {
+      const agentsGuidance = 'Team naming conventions apply';
+      const customInstructions = 'But prefer abbreviations';
+      const prompt = buildAIPrompt('myapp', ['working on auth'], agentsGuidance, customInstructions);
+      
+      expect(prompt).toContain(agentsGuidance);
+      expect(prompt).toContain(customInstructions);
     });
   });
 
@@ -237,10 +333,16 @@ function getConfig() {
     maxSignals: Number(process.env.OPENCODE_ZELLIJ_MAX_SIGNALS) || 25,
     model: process.env.OPENCODE_ZELLIJ_MODEL || 'gemini-3-flash-preview',
     customInstructions: process.env.OPENCODE_ZN_INSTRUCTIONS || '',
+    useAgentsMd: process.env.OPENCODE_ZN_USE_AGENTS_MD !== '0',
   };
 }
 
-function buildAIPrompt(project: string, signals: string[], customInstructions: string): string {
+function buildAIPrompt(
+  project: string,
+  signals: string[],
+  agentsMdGuidance: string | null,
+  customInstructions: string
+): string {
   const safeSignals = signals.slice(-5).map((s) => s.slice(0, 100));
   
   let prompt = `Generate a short Zellij terminal session name.
@@ -254,11 +356,40 @@ Rules:
 - Total max 40 chars, lowercase, only a-z 0-9 and hyphens
 - Return ONLY the session name, nothing else`;
 
+  if (agentsMdGuidance) {
+    prompt += `\n\nProject naming guidelines from AGENTS.md:\n${agentsMdGuidance}`;
+  }
+
   if (customInstructions) {
-    prompt += `\n\nAdditional instructions from user:\n${customInstructions.slice(0, 500)}`;
+    prompt += `\n\nUser instructions (take precedence over AGENTS.md):\n${customInstructions.slice(0, 500)}`;
   }
 
   return prompt;
+}
+
+function extractNamingGuidance(content: string): string | null {
+  const namingSectionMatch = content.match(
+    /##\s*(?:Session\s*)?Naming[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i
+  );
+  if (namingSectionMatch) {
+    return namingSectionMatch[1].trim().slice(0, 400);
+  }
+
+  const guidelinesMatch = content.match(
+    /##\s*Guidelines[^\n]*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/i
+  );
+  if (guidelinesMatch) {
+    const guideContent = guidelinesMatch[1];
+    const namingLines = guideContent
+      .split("\n")
+      .filter((line) => /naming|session|tag|intent/i.test(line))
+      .join("\n");
+    if (namingLines.length > 10) {
+      return namingLines.trim().slice(0, 400);
+    }
+  }
+
+  return null;
 }
 
 function addSignal(signals: string[], signal: string, maxSignals: number): void {
