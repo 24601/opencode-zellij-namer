@@ -4,6 +4,10 @@ AI-powered dynamic Zellij session naming for [OpenCode](https://opencode.ai).
 
 Automatically renames your Zellij terminal sessions based on what you're working on — project name, task type (feat, fix, debug, etc.), and contextual tags derived from your activity.
 
+![Screenshot showing Zellij session renamed to basicsetup-feat-namer](screenshot.png)
+
+*The plugin automatically renamed this session to `basicsetup-feat-namer` — project directory (basicsetup), intent (feat), and contextual tag (namer).*
+
 ## Features
 
 - **Automatic naming**: Sessions named like `myproject-feat-auth` or `api-debug-cache`
