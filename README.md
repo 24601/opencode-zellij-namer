@@ -139,12 +139,39 @@ export OPENCODE_ZELLIJ_DEBUG=1
 
 ## Development
 
+### Fork & Clone
+
+1. Fork this repo on GitHub
+2. Clone your fork:
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/opencode-zellij-namer
 cd opencode-zellij-namer
+```
+
+3. Update `package.json` with your fork's URL:
+
+```bash
+# Replace YOUR_USERNAME with your GitHub username
+sed -i 's/24601/YOUR_USERNAME/g' package.json
+```
+
+### Build & Test
+
+```bash
 npm install
 npm run build
 npm test
+```
+
+### Local Development
+
+To test your changes with OpenCode, update your config to point to your local build:
+
+```json
+{
+  "plugin": ["/path/to/your/opencode-zellij-namer"]
+}
 ```
 
 ## License
