@@ -1,6 +1,6 @@
 {
   "name": "opencode-zellij-namer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered dynamic Zellij session naming for OpenCode",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
