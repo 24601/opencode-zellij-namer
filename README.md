@@ -88,6 +88,28 @@ The plugin listens to these OpenCode events:
 - **Cooldown**: 5-minute minimum between actual renames
 - **Signal accumulation**: Builds context over time for better naming
 
+### Uniqueness
+
+While Zellij allows duplicate session names, this plugin attempts to generate unique names to help you distinguish between multiple sessions working on the same project.
+
+**Disambiguation strategy:**
+
+1. **Branch name**: If on `feat/user-auth`, adds `-auth` tag
+2. **Directory context**: Working in `src/payments/` adds `-payments` tag  
+3. **Task keywords**: Todo mentioning "caching" adds `-cache` tag
+4. **Time-based**: Falls back to `-am`/`-pm`/`-eve` based on time of day
+5. **Numeric suffix**: Last resort adds `-2`, `-3`, etc.
+
+**Example scenario:**
+
+| Session | Context | Generated Name |
+|---------|---------|----------------|
+| Terminal 1 | Working on auth | `myapp-feat-auth` |
+| Terminal 2 | Same project, payments | `myapp-feat-payments` |
+| Terminal 3 | Same project, morning | `myapp-feat-am` |
+
+This ensures you can identify which terminal is which at a glance, even with multiple sessions on the same project.
+
 ## Privacy
 
 When AI naming is enabled, the following data is sent to Google's Gemini API:
