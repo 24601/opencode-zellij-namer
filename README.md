@@ -12,6 +12,8 @@ Automatically renames your Zellij terminal sessions based on what you're working
 
 - **Automatic naming**: Sessions named like `myproject-feat-auth` or `api-debug-cache`
 - **AI-powered**: Uses Gemini 3 Flash to generate contextual, meaningful names
+- **AGENTS.md aware**: Reads project-specific naming conventions from your repo's `AGENTS.md`
+- **Custom instructions**: Personal naming preferences via env var (override AGENTS.md)
 - **Non-blocking**: Fire-and-forget design never slows down your workflow
 - **Stability-first**: Debouncing and cooldowns prevent name thrashing
 - **Privacy-conscious**: Only sends minimal context to AI (see [Privacy](#privacy))
