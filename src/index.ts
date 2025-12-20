@@ -348,7 +348,7 @@ function addSignal(state: State, signal: string, maxSignals: number): void {
   }
 }
 
-export const ZellijNamer = async ({ directory }: { directory: string }) => {
+const ZellijNamer = async ({ directory }: { directory: string }) => {
   const config = loadConfig();
   const log = createLogger(config.debug);
 
@@ -444,3 +444,5 @@ export const ZellijNamer = async ({ directory }: { directory: string }) => {
     },
   };
 };
+
+export default ZellijNamer;
