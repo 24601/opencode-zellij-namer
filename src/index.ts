@@ -368,6 +368,15 @@ const ZellijNamer = async ({ directory }: { directory: string }) => {
 
   log.debug(`Initialized with config: ${JSON.stringify({ ...config, debug: config.debug })}`);
 
+  // Trigger initial rename on plugin load
+  process.nextTick(async () => {
+    try {
+      await maybeRename(directory);
+    } catch (e) {
+      log.error(`Initial rename failed: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  });
+
   async function maybeRename(cwd: string): Promise<void> {
     const now = Date.now();
 
